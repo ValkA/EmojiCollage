@@ -1,4 +1,4 @@
-package valka.emojicollage.CannyEdge;
+package valka.emojicollage.Utils.CannyEdge;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;

@@ -17,7 +17,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import valka.emojicollage.CannyEdge.CannyEdgeWrapper;
+import valka.emojicollage.Utils.CannyEdge.CannyEdgeWrapper;
 import valka.emojicollage.KeyGenerator.BaseKeyGenerator;
 
 /**
@@ -131,25 +131,19 @@ public class ImagesManager{
         if (rectNotInCanvas(outputCanvas, dstRect)) return;
         double[] desiredKey = keyGenerator.calculateKey(scaledInput, dstRect.left, dstRect.top, dstRect.width(), dstRect.height());
         Bitmap nearestSubimage = (Bitmap) subimagesTree.nearest(desiredKey);
+
+        /* //add some color randomness
+        double[] nearestKey = keyGenerator.calculateKey(nearestSubimage, 0, 0, nearestSubimage.getWidth(), nearestSubimage.getHeight());
+        for(int i=0; i<desiredKey.length; ++i) {
+            desiredKey[i] += (desiredKey[i] - nearestKey[i]) * (Math.random() * 2d - 1d) * 2d;
+        }
+        nearestSubimage = (Bitmap) subimagesTree.nearest(desiredKey);*/
+
         srcRect.left = 0;
         srcRect.top = 0;
         srcRect.right = nearestSubimage.getWidth();
         srcRect.bottom = nearestSubimage.getHeight();
-        //if(relaxes(outputBitmap, desiredKey, nearestSubimage, srcRect, dstRect)) {
-            outputCanvas.drawBitmap(nearestSubimage, srcRect, dstRect, paint);
-            //outputCanvas.drawPoint(dstRect.centerX(),dstRect.centerY(), paint);
-        //}
-    }
-
-    public boolean relaxes(Bitmap outputBitmap, double[] desiredKey, Bitmap nearestSubimage, Rect srcRect, Rect dstRect){
-        Bitmap buffer = Bitmap.createBitmap(dstRect.width(), dstRect.height(), Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(buffer);
-        Rect rect = new Rect(0,0, dstRect.width(), dstRect.height());
-        canvas.drawBitmap(outputBitmap, dstRect, rect, paint);
-        canvas.drawBitmap(nearestSubimage, srcRect, rect, paint);
-        double[] candidateKey = keyGenerator.calculateKey(buffer, rect);
-        double[] currentKey = keyGenerator.calculateKey(outputBitmap, dstRect);
-        return (BaseKeyGenerator.sqrDistance(candidateKey, desiredKey) < BaseKeyGenerator.sqrDistance(currentKey, desiredKey));
+        outputCanvas.drawBitmap(nearestSubimage, srcRect, dstRect, paint);
     }
 
     public void randomBySizeCreator(final Bitmap scaledInput, final Bitmap output, final CollageListener listener, final int density, final double randomness){

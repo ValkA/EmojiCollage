@@ -1,4 +1,4 @@
-package valka.emojicollage;
+package valka.emojicollage.Utils;
 
 /**
  * Created by ValkA on 10-Sep-16.

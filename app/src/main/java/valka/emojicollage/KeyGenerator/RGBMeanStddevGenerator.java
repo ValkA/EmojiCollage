@@ -6,9 +6,9 @@ import android.graphics.Color;
 /**
  * Created by ValkA on 10-Sep-16.
  */
-public class RGBGaussianGenerator extends BaseKeyGenerator {
+public class RGBMeanStddevGenerator extends BaseKeyGenerator {
     private final double stddevWeight;
-    public RGBGaussianGenerator(double stddevWeight){
+    public RGBMeanStddevGenerator(double stddevWeight){
         this.stddevWeight = stddevWeight;
     }
 

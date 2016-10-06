@@ -23,7 +23,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import valka.emojicollage.KeyGenerator.RGBMeanGenerator;
+import valka.emojicollage.KeyGenerator.YUVMeanGenerator;
 
 public class MainActivity extends AppCompatActivity implements CollageListener{
     static private final int SELECT_PICTURE_RESULT = 1;
@@ -46,7 +46,7 @@ public class MainActivity extends AppCompatActivity implements CollageListener{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        imagesManager = new ImagesManager(this, new RGBMeanGenerator());
+        imagesManager = new ImagesManager(this, new YUVMeanGenerator());
 
         collageImageView = (ImageView)findViewById(R.id.collageImageView);
         shareCollageButton = (Button)findViewById(R.id.shareCollageButton);
