@@ -1,4 +1,4 @@
-package valka.emojicollage.KeyGenerator;
+package valka.emojicollage.Collage.KeyGenerators;
 
 import android.graphics.Bitmap;
 import android.graphics.Rect;

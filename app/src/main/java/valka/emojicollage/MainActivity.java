@@ -23,19 +23,26 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-import valka.emojicollage.KeyGenerator.YUVMeanGenerator;
+import valka.emojicollage.Collage.CollageCreator;
+import valka.emojicollage.Collage.CollageListener;
+import valka.emojicollage.Collage.KeyGenerators.RGBMeanGenerator;
+import valka.emojicollage.Collage.PatchLoaders.BasePatchLoader;
+import valka.emojicollage.Collage.PatchLoaders.GalleryLoader;
+import valka.emojicollage.Collage.PatchLoaders.PatchLoaderListener;
+import valka.emojicollage.Collage.PatchLoaders.RawResourcesLoader;
 
-public class MainActivity extends AppCompatActivity implements CollageListener{
+public class MainActivity extends AppCompatActivity implements CollageListener, PatchLoaderListener{
     static private final int SELECT_PICTURE_RESULT = 1;
     private final MainActivity that = this;
     private final String TAG = "MainActivity";
 
-    ImagesManager imagesManager;
+    CollageCreator collageCreator;
     ImageView collageImageView;
     Button shareCollageButton;
     Button choosePhotoButton;
     Button saveCollageButton;
     Spinner typeSpinner;
+    Spinner patchesSpinner;
     ProgressBar progressBar;
 
     Bitmap collage = null;
@@ -46,14 +53,12 @@ public class MainActivity extends AppCompatActivity implements CollageListener{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        imagesManager = new ImagesManager(this, new YUVMeanGenerator());
-
         collageImageView = (ImageView)findViewById(R.id.collageImageView);
         shareCollageButton = (Button)findViewById(R.id.shareCollageButton);
         shareCollageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(collage != null) {
+                if (collage != null) {
                     shareBitmap(collage, "collage");
                 }
             }
@@ -84,7 +89,7 @@ public class MainActivity extends AppCompatActivity implements CollageListener{
             }
         });
         typeSpinner = (Spinner)findViewById(R.id.typeSpinner);
-        ArrayAdapter adapter = new ArrayAdapter<>(this, R.layout.list_item , ImagesManager.CreatorType.values());
+        ArrayAdapter adapter = new ArrayAdapter<>(this, R.layout.list_item , CollageCreator.CreatorType.values());
         adapter.setDropDownViewResource(R.layout.list_dropdown_item);
         typeSpinner.setAdapter(adapter);
         typeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -92,7 +97,7 @@ public class MainActivity extends AppCompatActivity implements CollageListener{
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 if (inputBitmap != null) {
                     disable();
-                    imagesManager.createCollage(inputBitmap, that, 5, 2d, (ImagesManager.CreatorType) typeSpinner.getSelectedItem(), 1920);
+                    collageCreator.createCollage(inputBitmap, that, 5, 2d, (CollageCreator.CreatorType) typeSpinner.getSelectedItem(), 1920);
                 }
             }
 
@@ -101,37 +106,30 @@ public class MainActivity extends AppCompatActivity implements CollageListener{
             }
         });
 
-        progressBar = (ProgressBar)findViewById(R.id.progressbar);
-    }
-
-    Bitmap bitmap;
-    Runnable updateRunnable = new Runnable() {
-        @Override
-        public void run() {
-            collageImageView.setImageBitmap(bitmap);
-        }
-    };
-    @Override
-    public void onProgress(final Bitmap bitmap, final float progress) {
-        this.bitmap = bitmap;
-        this.runOnUiThread(updateRunnable);
-        progressBar.setProgress((int)(progress*100));
-    }
-
-    @Override
-    public void onFinnished(Bitmap bitmap) {
-        if(collage!=null){
-            collage.recycle();
-        }
-        collage = bitmap;
-        this.runOnUiThread(new Runnable() {
+        patchesSpinner = (Spinner)findViewById(R.id.patchesSpinner);
+        ArrayAdapter patchesAdapter = new ArrayAdapter<>(this, R.layout.list_item , BasePatchLoader.LoaderType.values());
+        patchesAdapter.setDropDownViewResource(R.layout.list_dropdown_item);
+        patchesSpinner.setAdapter(patchesAdapter);
+        patchesSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void run() {
-                collageImageView.setImageBitmap(collage);
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                switch ((BasePatchLoader.LoaderType)patchesSpinner.getSelectedItem()){
+                    case Gallery:
+                        collageCreator.loadPatches(new GalleryLoader(that, 32), new RGBMeanGenerator(), that);
+                    case Emoji:
+                        collageCreator.loadPatches(new RawResourcesLoader(that), new RGBMeanGenerator(), that);
+                }
+                disable();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
             }
         });
-        progressBar.setProgress(0);
-        enable();
+
+        progressBar = (ProgressBar)findViewById(R.id.progressbar);
+
+        collageCreator = new CollageCreator();
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -144,7 +142,7 @@ public class MainActivity extends AppCompatActivity implements CollageListener{
                     }
                     inputBitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
                     disable();
-                    imagesManager.createCollage(inputBitmap, this, 5, 2d, (ImagesManager.CreatorType)typeSpinner.getSelectedItem(), 1920);
+                    collageCreator.createCollage(inputBitmap, this, 5, 2d, (CollageCreator.CreatorType)typeSpinner.getSelectedItem(), 1920);
                 } catch (IOException e) {
                     Toast.makeText(this, "File not found", Toast.LENGTH_SHORT);
                     e.printStackTrace();
@@ -176,6 +174,7 @@ public class MainActivity extends AppCompatActivity implements CollageListener{
             @Override
             public void run() {
                 typeSpinner.setEnabled(true);
+                patchesSpinner.setEnabled(true);
                 choosePhotoButton.setEnabled(true);
                 shareCollageButton.setEnabled(true);
                 saveCollageButton.setEnabled(true);
@@ -188,11 +187,57 @@ public class MainActivity extends AppCompatActivity implements CollageListener{
             @Override
             public void run() {
                 typeSpinner.setEnabled(false);
+                patchesSpinner.setEnabled(false);
                 choosePhotoButton.setEnabled(false);
                 shareCollageButton.setEnabled(false);
                 saveCollageButton.setEnabled(false);
 
             }
         });
+    }
+
+    //Collage creator callbacks
+    Bitmap bitmap;
+    Runnable updateRunnable = new Runnable() {
+        @Override
+        public void run() {
+            collageImageView.setImageBitmap(bitmap);
+
+        }
+    };
+    @Override
+    public void onProgress(final Bitmap bitmap, final float progress) {
+        this.bitmap = bitmap;
+        this.runOnUiThread(updateRunnable);
+        progressBar.setProgress((int) (progress * 100));
+    }
+
+    @Override
+    public void onFinnished(Bitmap bitmap) {
+        if(collage != null){
+            collage.recycle();
+        }
+        collage = bitmap;
+        this.runOnUiThread(updateRunnable);
+        progressBar.setProgress(0);
+        enable();
+    }
+
+    //Patch loader callbacks
+    @Override
+    public void onPatchLoaderProgress(Bitmap bitmap, float progress) {
+        if(bitmap != null){
+            this.bitmap = bitmap;
+            this.runOnUiThread(updateRunnable);
+        }
+        progressBar.setProgress((int) (progress * 100));
+    }
+
+    @Override
+    public void onPatchLoaderFinnished() {
+        this.bitmap = null;
+        this.runOnUiThread(updateRunnable);
+        progressBar.setProgress(0);
+        enable();
     }
 }

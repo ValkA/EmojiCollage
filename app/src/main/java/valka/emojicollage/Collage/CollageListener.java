@@ -1,4 +1,4 @@
-package valka.emojicollage;
+package valka.emojicollage.Collage;
 
 import android.graphics.Bitmap;
 

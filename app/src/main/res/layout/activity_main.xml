@@ -20,6 +20,29 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
+            android:text="Patches:"
+            android:layout_marginLeft="10dp"
+            android:gravity="center"
+            android:textSize="@dimen/text_size_mainscreen"
+            android:textColor="@color/colorText"/>
+
+        <Spinner
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/patchesSpinner"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="horizontal"
+        android:background="@color/colorPrimaryDark">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
             android:text="Filter:"
             android:layout_marginLeft="10dp"
             android:gravity="center"

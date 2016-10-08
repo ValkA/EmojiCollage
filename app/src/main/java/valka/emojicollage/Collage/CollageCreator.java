@@ -1,9 +1,6 @@
-package valka.emojicollage;
+package valka.emojicollage.Collage;
 
-import android.content.Context;
-import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -12,23 +9,25 @@ import android.util.Log;
 
 import net.sf.javaml.core.kdtree.KDTree;
 
-import java.lang.reflect.Field;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import valka.emojicollage.Collage.KeyGenerators.BaseKeyGenerator;
+import valka.emojicollage.Collage.PatchLoaders.BasePatchLoader;
+import valka.emojicollage.Collage.PatchLoaders.PatchLoaderListener;
 import valka.emojicollage.Utils.CannyEdge.CannyEdgeWrapper;
-import valka.emojicollage.KeyGenerator.BaseKeyGenerator;
 
 /**
  * Created by ValkA on 10-Sep-16.
  */
-public class ImagesManager{
+public class CollageCreator {
     public enum CreatorType {RandomWithEdges, RandomBySize, Linear}
-    private static String TAG = "ImagesManager";
+    private static String TAG = "CollageCreator";
     private final int subimageSize = 32;//width & height
-    private final KDTree subimagesTree;//<dobule[kdTreeDimension],Bitmap>
-    private final BaseKeyGenerator keyGenerator;
+    private KDTree subimagesTree;
+    private BaseKeyGenerator keyGenerator;
     private final ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(2));
 
     private final int cannyWidth = 400;
@@ -36,20 +35,26 @@ public class ImagesManager{
     private final CannyEdgeWrapper cannyEdgeWrapper = new CannyEdgeWrapper(cannyWidth,cannyHeight);
     private final Paint paint = new Paint();
 
-    public ImagesManager(Context context, BaseKeyGenerator keyGenerator){
-        this.keyGenerator = keyGenerator;
-        this.subimagesTree = new KDTree(keyGenerator.getKeyDimension());
+    public CollageCreator(){
         paint.setFilterBitmap(true);
-        for (Field field : R.raw.class.getFields()) {
-            try {
-                Integer resourceID = field.getInt(field);
-                Bitmap subimageBitmap = loadBitmap(context.getResources(), resourceID);
-                double[] subimageKey = keyGenerator.calculateKey(subimageBitmap, 0, 0, subimageBitmap.getWidth(), subimageBitmap.getHeight());
-                subimagesTree.insert(subimageKey, subimageBitmap);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
+    }
+
+    public void loadPatches(final BasePatchLoader patchLoader, final BaseKeyGenerator keyGenerator, final PatchLoaderListener listener){
+        this.keyGenerator = keyGenerator;
+        subimagesTree = new KDTree(keyGenerator.getKeyDimension());
+        threadPoolExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                List<Bitmap> patchesList = patchLoader.getPatchesList(listener);
+                for (Bitmap patch : patchesList) {
+                    double[] patchKey = keyGenerator.calculateKey(patch, 0, 0, patch.getWidth(), patch.getHeight());
+                    subimagesTree.insert(patchKey, patch);
+                }
+                if(listener != null) {
+                    listener.onPatchLoaderFinnished();
+                }
             }
-        }
+        });
     }
 
     public void createCollage(final Bitmap input, final CollageListener listener, final int density, final double randomness, final CreatorType type, final int outputBoxSize){
@@ -88,7 +93,7 @@ public class ImagesManager{
         });
     }
 
-    public void cannyEdgedCreator(final Bitmap scaledInput, final Bitmap output, final CollageListener listener, final int density, final double randomness){
+    private void cannyEdgedCreator(final Bitmap scaledInput, final Bitmap output, final CollageListener listener, final int density, final double randomness){
         Canvas outputCanvas = new Canvas(output);
         Rect dstRect = new Rect();
         int cannyDensity = 3;
@@ -122,7 +127,7 @@ public class ImagesManager{
         }
     }
 
-    public double sqr(double x){
+    private double sqr(double x){
         return x*x*x;
     }
 
@@ -146,7 +151,7 @@ public class ImagesManager{
         outputCanvas.drawBitmap(nearestSubimage, srcRect, dstRect, paint);
     }
 
-    public void randomBySizeCreator(final Bitmap scaledInput, final Bitmap output, final CollageListener listener, final int density, final double randomness){
+    private void randomBySizeCreator(final Bitmap scaledInput, final Bitmap output, final CollageListener listener, final int density, final double randomness){
         Canvas outputCanvas = new Canvas(output);
         Rect dstRect = new Rect();
         for(int i=0; i<density; ++i){
@@ -178,7 +183,7 @@ public class ImagesManager{
         }
     }
 
-    public void linearCreator(final Bitmap scaledInput, final Bitmap output, final CollageListener listener, final int density, final double randomness){
+    private void linearCreator(final Bitmap scaledInput, final Bitmap output, final CollageListener listener, final int density, final double randomness){
         Canvas outputCanvas = new Canvas(output);
         Rect dstRect = new Rect();
         int widthSubimages = scaledInput.getWidth() / subimageSize;
@@ -212,12 +217,4 @@ public class ImagesManager{
     private boolean rectNotInCanvas(Canvas canvas, Rect rect){
         return (rect.right > canvas.getWidth() || rect.bottom > canvas.getHeight() || rect.left < 0 || rect.top < 0);
     }
-
-    private Bitmap loadBitmap(Resources resources, int resourceID){
-        BitmapFactory.Options opt = new BitmapFactory.Options();
-        opt.inScaled = false;
-        return BitmapFactory.decodeResource(resources, resourceID, opt);
-    }
-
-
 }
