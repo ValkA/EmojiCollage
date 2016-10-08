@@ -41,7 +41,7 @@ public class CollageCreator {
 
     public void loadPatches(final BasePatchLoader patchLoader, final BaseKeyGenerator keyGenerator, final PatchLoaderListener listener){
         this.keyGenerator = keyGenerator;
-        subimagesTree = new KDTree(keyGenerator.getKeyDimension());
+        subimagesTree = new KDTree(keyGenerator.getKeyDimension());//TODO: this guy isn't final, i think it adds patches to old one coz it is used from a Runnable()...
         threadPoolExecutor.execute(new Runnable() {
             @Override
             public void run() {
