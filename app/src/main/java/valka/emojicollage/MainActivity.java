@@ -27,6 +27,7 @@ import valka.emojicollage.Collage.CollageCreator;
 import valka.emojicollage.Collage.CollageListener;
 import valka.emojicollage.Collage.KeyGenerators.RGBMeanGenerator;
 import valka.emojicollage.Collage.PatchLoaders.BasePatchLoader;
+import valka.emojicollage.Collage.PatchLoaders.FacesLoader;
 import valka.emojicollage.Collage.PatchLoaders.GalleryLoader;
 import valka.emojicollage.Collage.PatchLoaders.PatchLoaderListener;
 import valka.emojicollage.Collage.PatchLoaders.RawResourcesLoader;
@@ -52,6 +53,8 @@ public class MainActivity extends AppCompatActivity implements CollageListener, 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        askPermissions();
 
         collageImageView = (ImageView)findViewById(R.id.collageImageView);
         shareCollageButton = (Button)findViewById(R.id.shareCollageButton);
@@ -116,8 +119,13 @@ public class MainActivity extends AppCompatActivity implements CollageListener, 
                 switch ((BasePatchLoader.LoaderType)patchesSpinner.getSelectedItem()){
                     case Gallery:
                         collageCreator.loadPatches(new GalleryLoader(that, 32), new RGBMeanGenerator(), that);
+                        break;
                     case Emoji:
                         collageCreator.loadPatches(new RawResourcesLoader(that), new RGBMeanGenerator(), that);
+                        break;
+                    case Faces:
+                        collageCreator.loadPatches(new FacesLoader(that), new RGBMeanGenerator(), that);
+                        break;
                 }
                 disable();
             }
@@ -239,5 +247,25 @@ public class MainActivity extends AppCompatActivity implements CollageListener, 
         this.runOnUiThread(updateRunnable);
         progressBar.setProgress(0);
         enable();
+    }
+
+    private void askPermissions(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+
+                // Should we show an explanation?
+                if (shouldShowRequestPermissionRationale(
+                        Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                    // Explain to the user why we need to read the contacts
+                }
+
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
+
+                // MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE is an
+                // app-defined int constant
+
+                return;
+            }
+        }
     }
 }

@@ -33,6 +33,7 @@ public class GalleryLoader extends BasePatchLoader{
         String where = ImageColumns.DATA + " LIKE '%DCIM%' OR " + ImageColumns.DATA + " LIKE '%WhatsApp%'";//TODO: give user to choose album or something like that ...
         Cursor cursor = context.getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, columns, where, null, null);
         LinkedList<Bitmap> patchesList = new LinkedList<>();
+
         if (cursor.moveToFirst()) {
             final int dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
             final int widthColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.WIDTH);
