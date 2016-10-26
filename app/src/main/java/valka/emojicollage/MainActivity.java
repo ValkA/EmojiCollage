@@ -22,6 +22,7 @@ import android.widget.Toast;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.concurrent.Future;
 
 import valka.emojicollage.Collage.CollageCreator;
 import valka.emojicollage.Collage.CollageListener;
@@ -48,6 +49,8 @@ public class MainActivity extends AppCompatActivity implements CollageListener, 
 
     Bitmap collage = null;
     Bitmap inputBitmap = null;
+    Future currentFuture = null;
+    BasePatchLoader currentLoader = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +60,15 @@ public class MainActivity extends AppCompatActivity implements CollageListener, 
         askPermissions();
 
         collageImageView = (ImageView)findViewById(R.id.collageImageView);
+        collageImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(currentFuture != null && currentFuture.cancel(true)){
+                    Toast.makeText(that, getResources().getString(R.string.on_interrupt), Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+
         shareCollageButton = (Button)findViewById(R.id.shareCollageButton);
         shareCollageButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -118,15 +130,16 @@ public class MainActivity extends AppCompatActivity implements CollageListener, 
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 switch ((BasePatchLoader.LoaderType)patchesSpinner.getSelectedItem()){
                     case Gallery:
-                        collageCreator.loadPatches(new GalleryLoader(that, 32), new RGBMeanGenerator(), that);
+                        currentLoader = new GalleryLoader(that, 32);
                         break;
                     case Emoji:
-                        collageCreator.loadPatches(new RawResourcesLoader(that), new RGBMeanGenerator(), that);
+                        currentLoader = new RawResourcesLoader(that);
                         break;
                     case Faces:
-                        collageCreator.loadPatches(new FacesLoader(that), new RGBMeanGenerator(), that);
+                        currentLoader = new FacesLoader(that);
                         break;
                 }
+                currentFuture = collageCreator.loadPatches(currentLoader, new RGBMeanGenerator(), that);
                 disable();
             }
 
@@ -150,7 +163,7 @@ public class MainActivity extends AppCompatActivity implements CollageListener, 
                     }
                     inputBitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
                     disable();
-                    collageCreator.createCollage(inputBitmap, this, 5, 2d, (CollageCreator.CreatorType)typeSpinner.getSelectedItem(), 1920);
+                    Future future = collageCreator.createCollage(inputBitmap, this, 5, 2d, (CollageCreator.CreatorType) typeSpinner.getSelectedItem(), 1920);
                 } catch (IOException e) {
                     Toast.makeText(this, "File not found", Toast.LENGTH_SHORT);
                     e.printStackTrace();
@@ -181,6 +194,7 @@ public class MainActivity extends AppCompatActivity implements CollageListener, 
         this.runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                currentFuture = null;
                 typeSpinner.setEnabled(true);
                 patchesSpinner.setEnabled(true);
                 choosePhotoButton.setEnabled(true);
@@ -229,6 +243,15 @@ public class MainActivity extends AppCompatActivity implements CollageListener, 
         this.runOnUiThread(updateRunnable);
         progressBar.setProgress(0);
         enable();
+    }
+
+    @Override
+    public void onBackPressed(){
+        if(currentFuture != null && currentFuture.cancel(true)){
+            Toast.makeText(that, getResources().getString(R.string.on_interrupt), Toast.LENGTH_LONG).show();
+        } else {
+            super.onBackPressed();
+        }
     }
 
     //Patch loader callbacks

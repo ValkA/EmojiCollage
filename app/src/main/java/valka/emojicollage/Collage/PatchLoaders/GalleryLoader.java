@@ -6,10 +6,11 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Images.ImageColumns;
-import android.util.Log;
 
 import java.util.LinkedList;
 import java.util.List;
+
+import valka.emojicollage.Utils.BitmapHelper;
 
 /**
  * Created by ValkA on 09-Oct-16.
@@ -30,7 +31,7 @@ public class GalleryLoader extends BasePatchLoader{
                 ImageColumns.DATA,
                 ImageColumns.HEIGHT,
                 ImageColumns.WIDTH};
-        String where = ImageColumns.DATA + " LIKE '%DCIM%' OR " + ImageColumns.DATA + " LIKE '%WhatsApp%'";//TODO: give user to choose album or something like that ...
+        String where = ImageColumns.DATA + " LIKE '%DCIM%' OR " + ImageColumns.DATA + " LIKE '%WhatsApp%' OR " + ImageColumns.DATA + " LIKE '%Camera%'";//TODO: give user to choose album or something like that ...
         Cursor cursor = context.getContentResolver().query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, columns, where, null, null);
         LinkedList<Bitmap> patchesList = new LinkedList<>();
 
@@ -44,29 +45,15 @@ public class GalleryLoader extends BasePatchLoader{
                 final String path = cursor.getString(dataColumn);
                 final int width = cursor.getInt(widthColumn);
                 final int height = cursor.getInt(heightColumn);
-                options.inSampleSize = calculateInSampleSize(width, height, patchSize, patchSize);
+                options.inSampleSize = BitmapHelper.calculateInSampleSize(width, height, patchSize, patchSize);
                 Bitmap bitmap = BitmapFactory.decodeFile(path, options);
                 patchesList.add(bitmap);
-                Log.i(TAG, String.format("(%dx%d)=>(%dx%d)\t\t%s",width,height,bitmap.getWidth(),bitmap.getHeight(),path));
+                //Log.i(TAG, String.format("(%dx%d)=>(%dx%d)\t\t%s",width,height,bitmap.getWidth(),bitmap.getHeight(),path));
                 if(listener != null){
                     listener.onPatchLoaderProgress(bitmap, (float)cursor.getPosition()/(float)cursor.getCount());
                 }
-            } while (cursor.moveToNext());
+            } while (cursor.moveToNext() && !Thread.interrupted());
         }
         return patchesList;
-    }
-
-    private int calculateInSampleSize(final int width, final int height, final int reqWidth, final int reqHeight) {
-        int inSampleSize = 1;
-        if (height > reqHeight || width > reqWidth) {
-            final int halfHeight = height / 2;
-            final int halfWidth = width / 2;
-            // Calculate the largest inSampleSize value that is a power of 2 and keeps both
-            // height and width larger than the requested height and width.
-            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
-                inSampleSize *= 2;
-            }
-        }
-        return inSampleSize;
     }
 }

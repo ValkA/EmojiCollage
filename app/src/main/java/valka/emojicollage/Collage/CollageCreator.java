@@ -10,9 +10,9 @@ import android.util.Log;
 import net.sf.javaml.core.kdtree.KDTree;
 
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import valka.emojicollage.Collage.KeyGenerators.BaseKeyGenerator;
 import valka.emojicollage.Collage.PatchLoaders.BasePatchLoader;
@@ -28,7 +28,7 @@ public class CollageCreator {
     private final int subimageSize = 32;//width & height
     private KDTree subimagesTree;
     private BaseKeyGenerator keyGenerator;
-    private final ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(1, 1, 0, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(2));
+    private final ExecutorService threadPool = Executors.newFixedThreadPool(1);
 
     private final int cannyWidth = 400;
     private final int cannyHeight = 400;
@@ -39,10 +39,11 @@ public class CollageCreator {
         paint.setFilterBitmap(true);
     }
 
-    public void loadPatches(final BasePatchLoader patchLoader, final BaseKeyGenerator keyGenerator, final PatchLoaderListener listener){
+    public Future loadPatches(final BasePatchLoader patchLoader, final BaseKeyGenerator keyGenerator, final PatchLoaderListener listener){
         this.keyGenerator = keyGenerator;
         subimagesTree = new KDTree(keyGenerator.getKeyDimension());//TODO: this guy isn't final, i think it adds patches to old one coz it is used from a Runnable()...
-        threadPoolExecutor.execute(new Runnable() {
+
+        return threadPool.submit(new Runnable() {
             @Override
             public void run() {
                 List<Bitmap> patchesList = patchLoader.getPatchesList(listener);
@@ -50,26 +51,26 @@ public class CollageCreator {
                     double[] patchKey = keyGenerator.calculateKey(patch, 0, 0, patch.getWidth(), patch.getHeight());
                     subimagesTree.insert(patchKey, patch);
                 }
-                if(listener != null) {
+                if (listener != null) {
                     listener.onPatchLoaderFinnished();
                 }
             }
         });
     }
 
-    public void createCollage(final Bitmap input, final CollageListener listener, final int density, final double randomness, final CreatorType type, final int outputBoxSize){
-        threadPoolExecutor.execute(new Runnable() {
+    public Future createCollage(final Bitmap input, final CollageListener listener, final int density, final double randomness, final CreatorType type, final int outputBoxSize){
+        return threadPool.submit(new Runnable() {
             @Override
             public void run() {
                 float max = Math.max(input.getWidth(), input.getHeight());
                 float min = Math.min(input.getWidth(), input.getHeight());
-                float ratio = min/max;
+                float ratio = min / max;
                 int scaledWidth, scaledHeight;
-                if(input.getWidth()>input.getHeight()){
+                if (input.getWidth() > input.getHeight()) {
                     scaledWidth = outputBoxSize;
-                    scaledHeight = (int)(outputBoxSize*ratio);
+                    scaledHeight = (int) (outputBoxSize * ratio);
                 } else {
-                    scaledWidth = (int)(outputBoxSize*ratio);
+                    scaledWidth = (int) (outputBoxSize * ratio);
                     scaledHeight = outputBoxSize;
                 }
                 final Bitmap scaledInput = Bitmap.createScaledBitmap(input, scaledWidth, scaledHeight, true);

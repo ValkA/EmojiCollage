@@ -9,5 +9,6 @@ import java.util.List;
  */
 public abstract class BasePatchLoader {
     public enum LoaderType {Emoji, Faces, Gallery}
+
     public abstract List<Bitmap> getPatchesList(PatchLoaderListener listener);
 }

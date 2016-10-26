@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">EmojiCollage</string>
-
+    <string name="on_interrupt">Stopped doing what i was doing</string>
 </resources>
